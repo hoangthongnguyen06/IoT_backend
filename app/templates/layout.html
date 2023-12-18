@@ -1,0 +1,33 @@
+<!-- app/templates/layout.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Course Management{% endblock %}</title>
+    <!-- Thêm các đường link tới các file CSS cần thiết -->
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('course.dashboard') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('course.manage_courses') }}">Manage Courses</a></li>
+            {% if 'user_id' in session %}
+                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+            {% else %}
+                <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul class="flash-messages">
+                {% for message in messages %}
+                    <li class="{{ message[1] }}">{{ message[0] }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</body>
+</html>

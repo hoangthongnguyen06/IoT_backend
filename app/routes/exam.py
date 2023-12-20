@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, redirect, session, url_for, flash
 from app.models.exam import Exam
 from app.models import db
 
@@ -25,3 +25,21 @@ def update_exam(exam_id):
         data = request.get_json()
         exam.course_id = data['course_id']
         exam.device_id = data['device_id']
+        # ... thêm các field khác
+        db.session.commit()
+        return jsonify({'message': 'Exam updated successfully'})
+    else:
+        return jsonify({'message': 'Exam not found'}), 404
+
+@exam_bp.route('/exams/<int:exam_id>', methods=['DELETE'])
+def delete_exam(exam_id):
+    exam = Exam.query.get(exam_id)
+    if exam:
+        db.session.delete(exam)
+        db.session.commit()
+        return jsonify({'message': 'Exam deleted successfully'})
+    else:
+        return jsonify({'message': 'Exam not found'}), 404
+
+def create_exam_blueprint():
+    return exam_bp

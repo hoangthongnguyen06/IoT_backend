@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, redirect, session, url_for, flash
 from app.models.exam_result import ExamResult
 from app.models import db
 
@@ -40,3 +40,6 @@ def delete_exam_result(result_id):
         return jsonify({'message': 'Exam result deleted successfully'})
     else:
         return jsonify({'message': 'Exam result not found'}), 404
+
+def create_exam_result_blueprint():
+    return exam_result_bp

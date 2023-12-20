@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, redirect, session, url_for, flash
 from app.models.device import Device
 from app.models import db
 
@@ -40,3 +40,6 @@ def delete_device(device_id):
         return jsonify({'message': 'Device deleted successfully'})
     else:
         return jsonify({'message': 'Device not found'}), 404
+
+def create_device_blueprint():
+    return device_bp

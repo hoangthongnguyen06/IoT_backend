@@ -40,6 +40,3 @@ def delete_exam(exam_id):
         return jsonify({'message': 'Exam deleted successfully'})
     else:
         return jsonify({'message': 'Exam not found'}), 404
-
-def create_exam_blueprint():
-    return exam_bp

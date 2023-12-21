@@ -41,5 +41,4 @@ def delete_exam_result(result_id):
     else:
         return jsonify({'message': 'Exam result not found'}), 404
 
-def create_exam_result_blueprint():
-    return exam_result_bp
+

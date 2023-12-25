@@ -14,9 +14,7 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = 'IoT'  
     jwt = JWTManager(app)
     login_manager.init_app(app)
-    app.config['UPLOADS_DEFAULT_DEST'] = 'app/exploits'
-    
-    # configure_uploads(app, exploit_files)
+
     from app.routes import auth_bp, course_bp, cve_bp, device_bp, exam_bp, exam_result_bp, unit_bp, user_bp, exploit_bp
 
     app.register_blueprint(auth_bp)

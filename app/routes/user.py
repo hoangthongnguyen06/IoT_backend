@@ -13,7 +13,7 @@ def get_users():
     current_user = get_jwt_identity()
     if current_user['role'] == 'admin':
         users = User.query.all()
-        users_data = [{'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role} for user in users]
+        users_data = [{'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role, 'course_id': user.course_id} for user in users]
         return jsonify({'users': users_data})
     else:
         return jsonify({'message': 'Unauthorized'}), 403

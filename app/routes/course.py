@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, session, request, flash
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from app.models import course
-from app.models import user
+from app.models.course import course_exam_association
 from app import db
 
 course_bp = Blueprint('course', __name__)
@@ -36,13 +35,51 @@ def create_course():
         return jsonify({'message': 'Unauthorized'}), 403
     
 @course_bp.route('/courses', methods=['GET'])
+@jwt_required()
 def get_courses():
     courses = Course.query.all()
-    courses_data = [{'id': course.id, 'name': course.name, 'description': course.description} for course in courses]
+    courses_data = []
+
+    for course in courses:
+        # Lấy danh sách người tham gia khóa học
+        users_in_course = [{'id': user.id, 'username': user.username} for user in course.users]
+
+        # Lấy danh sách đề thi trong khóa học
+        exams_in_course = [{'id': exam.id, 'score': exam.score} for exam in course.exams]
+
+        course_data = {
+            'id': course.id,
+            'name': course.name,
+            'description': course.description,
+            'users': users_in_course,
+            'exams': exams_in_course
+        }
+
+        courses_data.append(course_data)
+
     return jsonify({'courses': courses_data})
+
+@course_bp.route('/course/<int:user_id>', methods=['GET'])
+@jwt_required()
+def get_courses_by_user(user_id):
+    current_user = get_jwt_identity()
+    
+    if current_user['role'] == 'user':
+        user = User.query.get(user_id)
+        if user:
+            courses = Course.query.filter_by(id=user.course_id).all()
+
+            user_courses = [{'id': course.id, 'name': course.name, 'description': course.description} for course in courses]
+
+            return jsonify({'user_courses': user_courses})
+        else:
+            return jsonify({'message': 'User not found'}), 404
+    else:
+        return jsonify({'message': 'Unauthorized'}), 403
 
 
 @course_bp.route('/courses/<int:course_id>', methods=['GET'])
+@jwt_required()
 def get_course(course_id):
     course = Course.query.get(course_id)
     if course:
@@ -71,40 +108,45 @@ def update_course(course_id):
 
 @course_bp.route('/courses/<int:course_id>/update', methods=['POST'])
 @jwt_required()
-def add_users_and_exams_to_course(course_id):
-    current_user = get_jwt_identity()
-    if current_user['role'] == 'admin':
-        course = Course.query.get(course_id)
-        if not course:
-            return jsonify({'message': 'Course not found'}), 404
+def add_user_and_exam_to_course(course_id):
+    try:
+        current_user = get_jwt_identity()
 
-        data = request.get_json()
-        user_ids = data.get('user_ids', [])
-        exam_ids = data.get('exam_ids', [])
+        if current_user['role'] == 'admin':
+            data = request.get_json()
 
-        # Lặp qua danh sách user_ids và thêm từng user vào course
-        # for user_id in user_ids:
-        #     user = User.query.get(user_id)
-        #     if user:
-        #         if course.users is None:
-        #             course.users = []
-        #             course.users.append(user)
+            # Lấy đối tượng Course từ cơ sở dữ liệu
+            course = Course.query.get(course_id)
 
-        # Lặp qua danh sách exam_ids và thêm từng exam vào course
-        for exam_id in exam_ids:
-            exam = Exam.query.get(exam_ids)
-            if exam:
-                if course.exams is None:
-                    course.exams = []
-                course.exams.append(exam)
+            if course:
+                # Kiểm tra sự tồn tại của Exam và User
+                exam_id = data.get('exam_id')
+                user_id = data.get('user_id')
 
-        # Lưu thay đổi vào cơ sở dữ liệu
-        db.session.commit()
+                exam = Exam.query.get(exam_id)
+                user = User.query.get(user_id)
 
+                if exam and user:
+                    course_exam_association_record = course_exam_association.insert().values(
+                        course_id=course.id,
+                        exam_id=exam.id
+                    )
+                    db.session.execute(course_exam_association_record)
 
-        return jsonify({'message': 'Users and exams added to course successfully'})
-    else:
-        return jsonify({'message': 'Unauthorized'}), 403
+                    user.course_id = course_id
+
+                    db.session.commit()
+
+                    return jsonify({'message': 'User and Exam added to course successfully'})
+                else:
+                    return jsonify({'message': 'Exam or User not found'}), 404
+            else:
+                return jsonify({'message': 'Course not found'}), 404
+        else:
+            return jsonify({'message': 'Unauthorized'}), 403
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Error adding User and Exam to course: {str(e)}'}), 500
     
 @course_bp.route('/courses/<int:course_id>', methods=['DELETE'])
 @jwt_required()

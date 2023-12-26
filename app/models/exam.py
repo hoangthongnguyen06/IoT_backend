@@ -1,5 +1,6 @@
 from app.models import db
 from datetime import datetime, timedelta
+from app.models.course import course_exam_association
 
 class Exam(db.Model):
     __tablename__ = "exams"
@@ -13,11 +14,6 @@ class Exam(db.Model):
     # Quan hệ với Course và User
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, unique=True)
 
-    course = db.relationship('Course', back_populates='exams')
+     # Quan hệ với Course (Nhiều-nhiều)
+    courses = db.relationship('Course', secondary=course_exam_association, back_populates='exams')
     user = db.relationship('User', back_populates='exam')
-
-course_exam_association = db.Table(
-    'course_exam_association',
-    db.Column('course_id', db.Integer, db.ForeignKey('courses.id')),
-    db.Column('exam_id', db.Integer, db.ForeignKey('exams.id'))
-)

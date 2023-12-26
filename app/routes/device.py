@@ -9,7 +9,7 @@ device_bp = Blueprint('device', __name__)
 @jwt_required()
 def get_devices():
     devices = Device.query.all()
-    devices_data = [{'id': device.id, 'name': device.name, 'description': device.description} for device in devices]
+    devices_data = [{'id': device.id, 'name': device.name, 'description': device.description, "ip_address": device.ip_address} for device in devices]
     return jsonify({'devices': devices_data})
 
 @device_bp.route('/devices', methods=['POST'])
@@ -18,7 +18,7 @@ def create_device():
     current_user = get_jwt_identity()
     if current_user['role'] == 'admin':
         data = request.get_json()
-        new_device = Device(name=data['name'], description=data['description'])
+        new_device = Device(name=data['name'], description=data['description'], ip_address=data['ip_address'])
         db.session.add(new_device)
         db.session.commit()
         return jsonify({'message': 'Device created successfully'})
@@ -34,6 +34,7 @@ def update_device(device_id):
             data = request.get_json()
             device.name = data['name']
             device.description = data['description']
+            device.ip_address=data['ip_address']
             db.session.commit()
             return jsonify({'message': 'Device updated successfully'})
         else:

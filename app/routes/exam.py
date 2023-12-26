@@ -27,7 +27,9 @@ def get_exams():
                 'course_id': exam.course_id,
                 'device_id': exam.device_id,
                 'score': exam.score,
-                'device_name': device.name  # Thêm thông tin về tên device
+                'device_name': device.name,  # Thêm thông tin về tên device
+                'created_at': exam.created_at.strftime("%Y-%m-%d %H:%M:%S"),  # Format ngày giờ
+                'duration': str(exam.exam_duration)  # Chuyển đối timedelta thành chuỗi
             }
 
             exams_data.append(exam_info)
@@ -35,6 +37,7 @@ def get_exams():
         return jsonify({'exams': exams_data})
     except Exception as e:
         return jsonify({'message': 'Error fetching exams' + str(e)}), 500
+
 @exam_bp.route('/exams', methods=['POST'])
 @jwt_required()
 def create_exam():
@@ -47,8 +50,10 @@ def create_exam():
                 course_id=data['course_id'],
                 device_id=data['device_id'],
                 score=data['score'],
-                user_id=data.get('user_id')
-                )  # Thêm field user_id nếu cần
+                user_id=data.get('user_id'),
+                exam_duration=data.get('exam_duration'),
+                create_at=data.get('create_at')
+            )  # Thêm field user_id nếu cần
             db.session.add(new_exam)
             db.session.commit()
 
@@ -57,7 +62,7 @@ def create_exam():
             return jsonify({'message': 'Unauthorized'}), 403
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': 'Error creating exam '+str(e)}), 500
+        return jsonify({'message': 'Error creating exam ' + str(e)}), 500
 
 @exam_bp.route('/exams/<int:exam_id>', methods=['PUT'])
 @jwt_required()
@@ -72,7 +77,8 @@ def update_exam(exam_id):
                 exam.device_id = data['device_id']
                 exam.score = data['score']
                 exam.user_id = data.get('user_id')  # Thêm field user_id nếu cần
-
+                exam.exam_duration = data.get('exam_duration'),
+                exam.create_at = data.get('create_at')
                 db.session.commit()
                 return jsonify({'message': 'Exam updated successfully'})
             else:
@@ -81,7 +87,7 @@ def update_exam(exam_id):
             return jsonify({'message': 'Unauthorized'}), 403
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': 'Error updating exam'}), 500
+        return jsonify({'message': 'Error updating exam ' + str(e)}), 500
 
 @exam_bp.route('/exams/<int:exam_id>', methods=['DELETE'])
 @jwt_required()
@@ -100,4 +106,4 @@ def delete_exam(exam_id):
             return jsonify({'message': 'Unauthorized'}), 403
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': 'Error deleting exam'}), 500
+        return jsonify({'message': 'Error deleting exam ' + str(e)}), 500

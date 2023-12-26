@@ -37,28 +37,31 @@ def create_course():
 @course_bp.route('/courses', methods=['GET'])
 @jwt_required()
 def get_courses():
-    courses = Course.query.all()
-    courses_data = []
+    current_user = get_jwt_identity()
+    if current_user['role'] == 'admin':
+        courses = Course.query.all()
+        courses_data = []
 
-    for course in courses:
-        # Lấy danh sách người tham gia khóa học
-        users_in_course = [{'id': user.id, 'username': user.username} for user in course.users]
+        for course in courses:
+            # Lấy danh sách người tham gia khóa học
+            users_in_course = [{'id': user.id, 'username': user.username} for user in course.users]
 
-        # Lấy danh sách đề thi trong khóa học
-        exams_in_course = [{'id': exam.id, 'score': exam.score} for exam in course.exams]
+            # Lấy danh sách đề thi trong khóa học
+            exams_in_course = [{'id': exam.id, 'score': exam.score} for exam in course.exams]
 
-        course_data = {
-            'id': course.id,
-            'name': course.name,
-            'description': course.description,
-            'users': users_in_course,
-            'exams': exams_in_course
-        }
+            course_data = {
+                'id': course.id,
+                'name': course.name,
+                'description': course.description,
+                'users': users_in_course,
+                'exams': exams_in_course
+            }
 
-        courses_data.append(course_data)
+            courses_data.append(course_data)
 
-    return jsonify({'courses': courses_data})
-
+        return jsonify({'courses': courses_data})
+    else:
+        return jsonify({'message': 'Unauthorized'}), 403
 @course_bp.route('/course/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_courses_by_user(user_id):
@@ -83,7 +86,7 @@ def get_courses_by_user(user_id):
 def get_course(course_id):
     course = Course.query.get(course_id)
     if course:
-        course_data = {'id': course.id, 'name': course.name, 'description': course.descriptio, 'exams':course.exams[0]}
+        course_data = {'id': course.id, 'name': course.name, 'description': course.description, 'exams':course.exams}
         return jsonify({'course': course_data})
     else:
         return jsonify({'message': 'Course not found'}), 404

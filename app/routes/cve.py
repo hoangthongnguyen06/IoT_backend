@@ -25,7 +25,8 @@ def create_cve():
         db.session.add(new_cve)
         db.session.commit()
         return jsonify({'message': 'CVE created successfully'})
-
+    else:
+        return jsonify({'message': 'Unauthorized'})
 @cve_bp.route('/cves/<int:cve_id>', methods=['PUT'])
 @jwt_required()
 def update_cve(cve_id):

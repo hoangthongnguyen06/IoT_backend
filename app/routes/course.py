@@ -15,25 +15,94 @@ from app.models import db
 
 course_bp = Blueprint('course', __name__)
 
+# @course_bp.route('/courses', methods=['POST'])
+# @jwt_required()
+# def create_course():
+#     current_user = get_jwt_identity()
+#     if current_user['role'] == 'admin':
+#         current_user = get_jwt_identity()
+#         if current_user['role'] == 'admin':
+#             data = request.get_json()
+#             new_course = Course(
+#                 name=data['name'],
+#                 description=data['description'],
+#                 start_time=data['start_time'],
+#                 end_time=data['end_time']
+#             )
+#             db.session.add(new_course)
+#             db.session.commit()
+#             return jsonify({'message': 'Course created successfully'})
+#         else:
+#             return jsonify({'message': 'Unauthorized'}), 403
+#     else:
+#         return jsonify({'message': 'Unauthorized'}), 403
+
 @course_bp.route('/courses', methods=['POST'])
 @jwt_required()
 def create_course():
     current_user = get_jwt_identity()
+
     if current_user['role'] == 'admin':
-        current_user = get_jwt_identity()
-        if current_user['role'] == 'admin':
-            data = request.get_json()
-            new_course = Course(
-                name=data['name'],
-                description=data['description'],
-                start_time=data['start_time'],
-                end_time=data['end_time']
-            )
-            db.session.add(new_course)
-            db.session.commit()
-            return jsonify({'message': 'Course created successfully'})
-        else:
-            return jsonify({'message': 'Unauthorized'}), 403
+        data = request.get_json()
+
+        # Tạo khóa học mới
+        new_course = Course(
+            name=data['name'],
+            description=data['description'],
+            start_time=data['start_time'],
+            end_time=data['end_time']
+        )
+        db.session.add(new_course)
+        db.session.commit()
+
+        # Lấy id của khóa học mới tạo
+        course_id = new_course.id
+
+        # Lấy danh sách người dùng từ request
+        user_ids = data.get('user_ids', [])
+
+        # Lấy danh sách đề thi từ cơ sở dữ liệu
+        all_exams = Exam.query.all()
+
+        # Kiểm tra xem có đề thi nào không
+        if not all_exams:
+            return jsonify({'message': 'No exams available'}), 400
+
+        # Lấy số lượng đề thi có trong cơ sở dữ liệu
+        num_exams_to_assign = len(all_exams)
+
+        # Lấy danh sách người dùng từ cơ sở dữ liệu
+        users = User.query.filter(User.id.in_(user_ids)).all()
+
+        # Trộn ngẫu nhiên danh sách đề thi
+        shuffle(all_exams)
+
+        # Chọn số lượng đề cần thiết
+        selected_exams = all_exams[:num_exams_to_assign]
+
+        # Gán đề thi cho từng người dùng
+        for user in users:
+            for assigned_exam in selected_exams:
+                # Thêm bản ghi mới vào bảng liên kết
+                course_exam_association_record = course_exam_association.insert().values(
+                    course_id=course_id,
+                    exam_id=assigned_exam.id
+                )
+                db.session.execute(course_exam_association_record)
+
+                # Thêm bản ghi mới vào bảng liên kết user_exam_association
+                user_exam_association_record = user_exam_association.insert().values(
+                    user_id=user.id,
+                    exam_id=assigned_exam.id,
+                    score=None  # Đặt giá trị mặc định cho điểm số
+                )
+                db.session.execute(user_exam_association_record)
+
+                user.course_id = course_id
+
+        db.session.commit()
+
+        return jsonify({'message': 'Course created successfully with users and random exams'})
     else:
         return jsonify({'message': 'Unauthorized'}), 403
     

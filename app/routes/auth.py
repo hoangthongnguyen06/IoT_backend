@@ -38,12 +38,12 @@ def login_admin():
     else:
         return jsonify({'message': 'Invalid credentials'}), 40
     
-@auth_bp.route('/auth/logout', methods=['POST'])
+@auth_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
     return jsonify({'message': 'Logout successful'})
 
-@auth_bp.route('/auth/current_user', methods=['GET'])
+@auth_bp.route('/current_user', methods=['GET'])
 @jwt_required()
 def get_current_user():
     current_user = get_jwt_identity()

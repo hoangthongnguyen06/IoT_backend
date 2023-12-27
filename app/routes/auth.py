@@ -16,7 +16,7 @@ def login_user():
     user = User.query.filter_by(username=username).first()
 
     # if user and check_password_hash(user.password, password):
-    if user and user.password==password:
+    if user and user.password==password and user.role=="user":
         expires = timedelta(days=1)
         access_token = create_access_token(identity={'id': user.id, 'username': user.username, 'role': user.role}, expires_delta=expires)
         return jsonify(access_token=access_token, user_id=user.id, username=user.username, role=user.role)
@@ -32,8 +32,9 @@ def login_admin():
     user = User.query.filter_by(username=username).first()
 
     # if user and check_password_hash(user.password, password):
-    if user and user.password==password:
-        access_token = create_access_token(identity={'id': user.id, 'username': user.username, 'role': user.role})
+    if user and user.password==password and user.role=="admin":
+        expires = timedelta(days=1)
+        access_token = create_access_token(identity={'id': user.id, 'username': user.username, 'role': user.role}, expires_delta=expires)
         return jsonify(access_token=access_token, user_id=user.id, username=user.username, role=user.role)
     else:
         return jsonify({'message': 'Invalid credentials'}), 40

@@ -68,41 +68,39 @@ def create_course():
         if not all_exams:
             return jsonify({'message': 'No exams available'}), 400
 
-        # Lấy số lượng đề thi có trong cơ sở dữ liệu
-        num_exams_to_assign = len(all_exams)
+        # Lấy số lượng người dùng cần gán
+        num_users_to_assign = len(user_ids)
 
-        # Lấy danh sách người dùng từ cơ sở dữ liệu
-        users = User.query.filter(User.id.in_(user_ids)).all()
+        # Kiểm tra xem có đủ đề thi để gán không
+        if num_users_to_assign > len(all_exams):
+            return jsonify({'message': 'Not enough exams available for assignment'}), 400
 
         # Trộn ngẫu nhiên danh sách đề thi
         shuffle(all_exams)
 
-        # Chọn số lượng đề cần thiết
-        selected_exams = all_exams[:num_exams_to_assign]
-
         # Gán đề thi cho từng người dùng
-        for user in users:
-            for assigned_exam in selected_exams:
-                # Thêm bản ghi mới vào bảng liên kết
-                course_exam_association_record = course_exam_association.insert().values(
-                    course_id=course_id,
-                    exam_id=assigned_exam.id
-                )
-                db.session.execute(course_exam_association_record)
+        for user_id, assigned_exam in zip(user_ids, all_exams):
+            # Thêm bản ghi mới vào bảng liên kết
+            course_exam_association_record = course_exam_association.insert().values(
+                course_id=course_id,
+                exam_id=assigned_exam.id
+            )
+            db.session.execute(course_exam_association_record)
 
-                # Thêm bản ghi mới vào bảng liên kết user_exam_association
-                user_exam_association_record = user_exam_association.insert().values(
-                    user_id=user.id,
-                    exam_id=assigned_exam.id,
-                    score=None  # Đặt giá trị mặc định cho điểm số
-                )
-                db.session.execute(user_exam_association_record)
+            # Thêm bản ghi mới vào bảng liên kết user_exam_association
+            user_exam_association_record = user_exam_association.insert().values(
+                user_id=user_id,
+                exam_id=assigned_exam.id,
+                score=None  # Đặt giá trị mặc định cho điểm số
+            )
+            db.session.execute(user_exam_association_record)
 
-                user.course_id = course_id
+            user = User.query.get(user_id)
+            user.course_id = course_id
 
         db.session.commit()
 
-        return jsonify({'message': 'Course created successfully with users and random exams'})
+        return jsonify({'message': 'Course created successfully with users and exams'})
     else:
         return jsonify({'message': 'Unauthorized'}), 403
     

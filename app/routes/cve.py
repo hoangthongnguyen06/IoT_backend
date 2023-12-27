@@ -1,7 +1,7 @@
 
-from flask import Blueprint, jsonify, request, redirect, session, url_for, flash
-from flask import Blueprint, jsonify, request, flash, redirect, url_for, session
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.cve import CVE
 from app.models import db
 

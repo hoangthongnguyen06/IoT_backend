@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, session, request, flash
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.course import course_exam_association
 from app import db
+from random import shuffle
 
 course_bp = Blueprint('course', __name__)
 
@@ -9,7 +10,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.course import Course
 from app.models.user import User
-from app.models.exam import Exam
+from app.models.exam import Exam, user_exam_association
 from app.models import db
 
 course_bp = Blueprint('course', __name__)
@@ -118,38 +119,54 @@ def add_user_and_exam_to_course(course_id):
         if current_user['role'] == 'admin':
             data = request.get_json()
 
+            # Lấy danh sách người dùng và đề thi từ request
+            user_ids = data.get('user_ids', [])
+            exam_ids = data.get('exam_ids', [])
+
             # Lấy đối tượng Course từ cơ sở dữ liệu
             course = Course.query.get(course_id)
 
             if course:
-                # Kiểm tra sự tồn tại của Exam và User
-                exam_id = data.get('exam_id')
-                user_id = data.get('user_id')
+                # Lấy danh sách đề thi và người dùng từ cơ sở dữ liệu
+                exams = Exam.query.filter(Exam.id.in_(exam_ids)).all()
+                users = User.query.filter(User.id.in_(user_ids)).all()
 
-                exam = Exam.query.get(exam_id)
-                user = User.query.get(user_id)
+                # Trộn ngẫu nhiên danh sách đề thi để gán cho người dùng
+                shuffle(exams)
 
-                if exam and user:
-                    course_exam_association_record = course_exam_association.insert().values(
-                        course_id=course.id,
-                        exam_id=exam.id
-                    )
-                    db.session.execute(course_exam_association_record)
+                # Gán đề thi cho từng người dùng
+                for user in users:
+                    # Kiểm tra xem có đề thi nào còn lại không
+                    if exams:
+                        # Lấy đề thi đầu tiên từ danh sách đã trộn
+                        assigned_exam = exams.pop(0)
+                        # Thêm bản ghi mới vào bảng liên kết
+                        course_exam_association_record = course_exam_association.insert().values(
+                            course_id=course.id,
+                            exam_id=assigned_exam.id
+                        )
+                        db.session.execute(course_exam_association_record)
 
-                    user.course_id = course_id
+                        # Thêm bản ghi mới vào bảng liên kết user_exam_association
+                        user_exam_association_record = user_exam_association.insert().values(
+                            user_id=user.id,
+                            exam_id=assigned_exam.id,
+                            score=None  # Đặt giá trị mặc định cho điểm số
+                        )
+                        db.session.execute(user_exam_association_record)
 
-                    db.session.commit()
+                        user.course_id = course_id
 
-                    return jsonify({'message': 'User and Exam added to course successfully'})
-                else:
-                    return jsonify({'message': 'Exam or User not found'}), 404
+                db.session.commit()
+
+                return jsonify({'message': 'Exams assigned to users successfully'})
             else:
                 return jsonify({'message': 'Course not found'}), 404
         else:
             return jsonify({'message': 'Unauthorized'}), 403
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': f'Error adding User and Exam to course: {str(e)}'}), 500
+        return jsonify({'message': f'Error assigning exams to users: {str(e)}'}), 500
     
 @course_bp.route('/courses/<int:course_id>', methods=['DELETE'])
 @jwt_required()

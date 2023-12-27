@@ -1,5 +1,5 @@
-from flask import Blueprint, jsonify, request, redirect, session, url_for, flash
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.device import Device
 from app.models import db
 

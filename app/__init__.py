@@ -15,14 +15,13 @@ def create_app():
     jwt = JWTManager(app)
     login_manager.init_app(app)
     migrate = Migrate(app, db)
-    from app.routes import auth_bp, course_bp, cve_bp, device_bp, exam_bp, exam_result_bp, unit_bp, user_bp, exploit_bp
+    from app.routes import auth_bp, course_bp, cve_bp, device_bp, exam_bp, unit_bp, user_bp, exploit_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(course_bp)
     app.register_blueprint(cve_bp)
     app.register_blueprint(device_bp)
     app.register_blueprint(exam_bp)
-    app.register_blueprint(exam_result_bp)
     app.register_blueprint(unit_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(exploit_bp)

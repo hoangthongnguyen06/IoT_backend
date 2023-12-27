@@ -1,5 +1,5 @@
 from app.models import db
-
+from app.models.exam import user_exam_association
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -10,5 +10,5 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, check_constraint="role IN ('admin', 'user')")
     course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)
     # Quan hệ với Exam
-    exam = db.relationship('Exam', back_populates='user', uselist=False)
+    exams = db.relationship('Exam', secondary=user_exam_association, back_populates='users', uselist=False)
     course = db.relationship('Course', back_populates='users')

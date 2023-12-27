@@ -4,6 +4,7 @@ from flask_login import LoginManager
 from flask_jwt_extended import JWTManager
 from app.models import db
 from flask_migrate import Migrate
+from flask_cors import CORS
 login_manager = LoginManager()
 
 def create_app():
@@ -13,6 +14,7 @@ def create_app():
     db.init_app(app)
     app.config['JWT_SECRET_KEY'] = 'IoT'  
     jwt = JWTManager(app)
+    CORS(app)
     login_manager.init_app(app)
     migrate = Migrate(app, db)
     from app.routes import auth_bp, course_bp, cve_bp, device_bp, exam_bp, unit_bp, user_bp, exploit_bp

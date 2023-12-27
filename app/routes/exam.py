@@ -193,6 +193,8 @@ def delete_exam(exam_id):
         db.session.rollback()
         return jsonify({'message': 'Error deleting exam ' + str(e)}), 500
 
+
+
 @exam_bp.route('/upload_exam_answer', methods=['POST'])
 @jwt_required()
 def upload_exam():
@@ -242,5 +244,4 @@ def upload_exam():
         return jsonify({'message': 'Invalid file format'}), 400
 
 def allowed_file(filename):
-    # Cập nhật hàm này để kiểm tra đúng định dạng file Word hoặc các định dạng bạn cho phép
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'doc', 'docx'}

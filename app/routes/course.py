@@ -26,6 +26,8 @@ def create_course():
             new_course = Course(
                 name=data['name'],
                 description=data['description'],
+                start_time=data['start_time'],
+                end_time=data['end_time']
             )
             db.session.add(new_course)
             db.session.commit()
@@ -48,12 +50,14 @@ def get_courses():
             users_in_course = [{'id': user.id, 'username': user.username} for user in course.users]
 
             # Lấy danh sách đề thi trong khóa học
-            exams_in_course = [{'id': exam.id, 'score': exam.score} for exam in course.exams]
+            exams_in_course = [{'id': exam.id} for exam in course.exams]
 
             course_data = {
                 'id': course.id,
                 'name': course.name,
                 'description': course.description,
+                'start_time': course.start_time, 
+                'end_time': course.end_time,
                 'users': users_in_course,
                 'exams': exams_in_course
             }
@@ -63,6 +67,7 @@ def get_courses():
         return jsonify({'courses': courses_data})
     else:
         return jsonify({'message': 'Unauthorized'}), 403
+    
 @course_bp.route('/course/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_courses_by_user(user_id):
@@ -73,7 +78,7 @@ def get_courses_by_user(user_id):
         if user:
             courses = Course.query.filter_by(id=user.course_id).all()
 
-            user_courses = [{'id': course.id, 'name': course.name, 'description': course.description} for course in courses]
+            user_courses = [{'id': course.id, 'name': course.name, 'description': course.description, 'start_time': course.start_time, 'end_time': course.end_time } for course in courses]
 
             return jsonify({'user_courses': user_courses})
         else:
@@ -87,7 +92,19 @@ def get_courses_by_user(user_id):
 def get_course(course_id):
     course = Course.query.get(course_id)
     if course:
-        course_data = {'id': course.id, 'name': course.name, 'description': course.description, 'exams':course.exams}
+        users_in_course = [{'id': user.id, 'username': user.username} for user in course.users]
+
+        # Lấy danh sách đề thi trong khóa học
+        exams_in_course = [{'id': exam.id} for exam in course.exams]
+        course_data = {
+            'id': course.id,
+            'name': course.name,
+            'description': course.description,
+            'start_time': course.start_time, 
+            'end_time': course.end_time,
+            'users': users_in_course,
+            'exams': exams_in_course
+        }
         return jsonify({'course': course_data})
     else:
         return jsonify({'message': 'Course not found'}), 404
@@ -136,6 +153,8 @@ def update_course(course_id):
             data = request.get_json()
             course.name = data['name']
             course.description = data['description']
+            course.start_time=data['start_time']
+            course.end_time=data['end_time']
             db.session.commit()
             return jsonify({'message': 'Course updated successfully'})
         else:

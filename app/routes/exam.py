@@ -40,11 +40,12 @@ def get_exams():
     except Exception as e:
         return jsonify({'message': 'Error fetching exams' + str(e)}), 500
 
-@exam_bp.route('/exams/<int:user_id>', methods=['GET'])
+@exam_bp.route('/my-exams', methods=['GET'])
 @jwt_required()
-def get_exams_by_user(user_id):
+def get_exams_by_user():
     try:
         current_user = get_jwt_identity()
+        user_id = current_user['id']
         if current_user['role'] == 'user':
             user = User.query.get(user_id)
             if user:

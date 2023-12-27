@@ -92,6 +92,39 @@ def get_course(course_id):
     else:
         return jsonify({'message': 'Course not found'}), 404
 
+@course_bp.route('/course_results/<int:course_id>', methods=['GET'])
+def get_course_results(course_id):
+    # Lấy thông tin khóa thi
+    course = Course.query.get(course_id)
+    
+    if not course:
+        return jsonify({'message': 'Course not found'}), 404
+
+    # Lấy danh sách các đề thi thuộc khóa thi
+    exams = db.session.query(Exam).join(course_exam_association).filter(course_exam_association.c.course_id == course_id).all()
+
+    # Tạo danh sách kết quả
+    results = []
+    for exam in exams:
+        # Lấy thông tin người thi và điểm của họ
+        user_results = db.session.query(User.username, user_exam_association.c.score).\
+            join(user_exam_association, User.id == user_exam_association.c.user_id).\
+            filter(user_exam_association.c.exam_id == exam.id).all()
+
+        # Thêm thông tin vào danh sách kết quả
+        result_data = {
+            'exam_id': exam.id,
+            'results': [{'username': username, 'score': score} for username, score in user_results]
+        }
+        results.append(result_data)
+
+    # Tạo kết quả tổng hợp
+    course_result = {
+        'course_name': course.name,
+        'results': results
+    }
+
+    return jsonify(course_result)
 
 @course_bp.route('/courses/<int:course_id>', methods=['PUT'])
 @jwt_required()

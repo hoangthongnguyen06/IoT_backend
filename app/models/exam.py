@@ -5,7 +5,8 @@ user_exam_association = db.Table(
     'user_exam_association',
     db.Column('user_id', db.Integer, db.ForeignKey('users.id')),
     db.Column('exam_id', db.Integer, db.ForeignKey('exams.id')),
-    db.Column('score',db.Float, nullable=True )
+    db.Column('score',db.Float, nullable=True ),
+    db.Column('exam_answer_path', db.String(255), nullable=True)
 )
 class Exam(db.Model):
     __tablename__ = "exams"

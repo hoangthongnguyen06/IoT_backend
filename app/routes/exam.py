@@ -4,6 +4,10 @@ from app.models.device import Device
 from app.models.user import User
 from app.models import db
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from werkzeug.utils import secure_filename
+from flask import Blueprint, request, jsonify, current_app
+import os
+from datetime import datetime
 
 exam_bp = Blueprint('exam', __name__)
 
@@ -45,7 +49,7 @@ def get_exams_by_user(user_id):
             user = User.query.get(user_id)
             if user:
                 # Lấy danh sách bài thi của người dùng từ bảng liên kết
-                user_exams = db.session.query(Exam, user_exam_association.c.score).join(
+                user_exams = db.session.query(Exam, user_exam_association.c.score, user_exam_association.c.exam_answer_path).join(
                     user_exam_association,
                     user_exam_association.c.exam_id == Exam.id
                 ).filter(
@@ -53,14 +57,15 @@ def get_exams_by_user(user_id):
                 ).all()
                 
                 exams_data = []
-                for exam, score in user_exams:
+                for exam, score, exam_answer_path in user_exams:
                     # Truy xuất thông tin về device từ cơ sở dữ liệu
                     device = Device.query.get(exam.device_id)
 
                     # Kiểm tra xem device có tồn tại hay không
                     if not device:
                         return jsonify({'message': 'Device not found'}), 404
-
+                    if exam_answer_path != "":
+                        exam_answer_path = "Đã nộp bài thi"
                     # Tạo thông tin về exam với thông tin về tên device
                     exam_info = {
                         'id': exam.id,
@@ -68,7 +73,8 @@ def get_exams_by_user(user_id):
                         'device_name': device.name,  # Thêm thông tin về tên device
                         'created_at': exam.created_at.strftime("%Y-%m-%d %H:%M:%S"),  # Format ngày giờ
                         'duration': str(exam.exam_duration),  # Chuyển đối timedelta thành chuỗi
-                        'score': score
+                        'score': score,
+                        'exam_answer_path':exam_answer_path
                     }
                     exams_data.append(exam_info)
 
@@ -186,3 +192,55 @@ def delete_exam(exam_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': 'Error deleting exam ' + str(e)}), 500
+
+@exam_bp.route('/upload_exam_answer', methods=['POST'])
+@jwt_required()
+def upload_exam():
+    current_user = get_jwt_identity()
+    
+    # Kiểm tra xem người dùng có quyền upload bài thi hay không
+    if current_user['role'] != 'user':
+        return jsonify({'message': 'Unauthorized'}), 403
+
+    exam_id = request.form['exam_id']
+    exam = Exam.query.get(exam_id)
+    
+    # Kiểm tra xem bài thi có tồn tại hay không
+    if not exam:
+        return jsonify({'message': 'Exam not found'}), 404
+
+    # Lấy nội dung bài làm từ request
+    exam_answer_file = request.files['exam_answer_file']
+
+    # Kiểm tra định dạng file
+    if exam_answer_file and allowed_file(exam_answer_file.filename):
+        # Tạo một tên an toàn cho file
+        filename = secure_filename(exam_answer_file.filename)
+
+        # Thư mục lưu trữ file (tương đối)
+        upload_folder = os.path.join(current_app.root_path, 'exam_answers', str(datetime.now().date()))
+
+        # Tạo thư mục nếu nó không tồn tại
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+
+        # Lưu file vào thư mục được cấu hình
+        exam_path = os.path.join(str(datetime.now().date()), filename)
+        exam_answer_file.save(os.path.join(upload_folder, filename))
+
+        # Lưu đường dẫn tương đối của file vào cơ sở dữ liệu
+        current_user_exam_association = user_exam_association.insert().values(
+            user_id=current_user['id'],
+            exam_id=exam_id,
+            exam_answer_path=exam_path
+        )
+        db.session.execute(current_user_exam_association)
+        db.session.commit()
+
+        return jsonify({'message': 'Exam uploaded successfully'})
+    else:
+        return jsonify({'message': 'Invalid file format'}), 400
+
+def allowed_file(filename):
+    # Cập nhật hàm này để kiểm tra đúng định dạng file Word hoặc các định dạng bạn cho phép
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'doc', 'docx'}

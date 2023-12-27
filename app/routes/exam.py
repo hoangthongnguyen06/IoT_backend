@@ -80,6 +80,47 @@ def get_exams_by_user(user_id):
     except Exception as e:
         return jsonify({'message': 'Error fetching exams by user: ' + str(e)}), 500
 
+@exam_bp.route('/exams/<int:exam_id>/update-score', methods=['POST'])
+@jwt_required()
+def update_user_exam_score(exam_id):
+    try:
+        current_user = get_jwt_identity()
+
+        if current_user['role'] == 'admin':
+            data = request.get_json()
+            user_id = data.get('user_id')
+            score = data.get('score')
+
+            # Kiểm tra sự tồn tại của Exam và User
+            exam = Exam.query.get(exam_id)
+            user = User.query.get(user_id)
+
+            if exam and user:
+                # Kiểm tra xem user đã tham gia kỳ thi này chưa
+                user_exam_association_record = db.session.query(user_exam_association).filter(
+                    (user_exam_association.c.user_id == user_id) &
+                    (user_exam_association.c.exam_id == exam_id)
+                ).first()
+
+                if user_exam_association_record:
+                    # Cập nhật điểm trong bảng liên kết
+                    user_exam_association_record = db.session.query(user_exam_association).filter(
+                        (user_exam_association.c.user_id == user_id) &
+                        (user_exam_association.c.exam_id == exam_id)
+                    ).update({"score": score})
+
+                    db.session.commit()
+                    return jsonify({'message': 'Score updated successfully'})
+                else:
+                    return jsonify({'message': 'User has not participated in this exam'}), 400
+            else:
+                return jsonify({'message': 'Exam or User not found'}), 404
+        else:
+            return jsonify({'message': 'Unauthorized'}), 403
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': f'Error updating score: {str(e)}'}), 500
+
 @exam_bp.route('/exams', methods=['POST'])
 @jwt_required()
 def create_exam():

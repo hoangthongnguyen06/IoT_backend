@@ -18,6 +18,17 @@ def get_users():
     else:
         return jsonify({'message': 'Unauthorized'}), 403
 
+@user_bp.route('/get_users_notadmin', methods=['GET'])
+@jwt_required()
+def get_users_notadmin():
+    current_user = get_jwt_identity()
+    if current_user['role'] == 'admin':
+        users = User.query.filter(User.role != 'admin').all()
+        users_data = [{'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role, 'course_id': user.course_id} for user in users]
+        return jsonify({'users': users_data})
+    else:
+        return jsonify({'message': 'Unauthorized'}), 403
+
 @user_bp.route('/users', methods=['POST'])
 @jwt_required()
 def create_user():

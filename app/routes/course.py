@@ -11,6 +11,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.course import Course
 from app.models.user import User
 from app.models.exam import Exam, user_exam_association
+from app.models.device import Device
+from app.models.exploit import Exploit
+from app.models.cve import CVE
 from app.models import db
 
 course_bp = Blueprint('course', __name__)
@@ -37,6 +40,26 @@ course_bp = Blueprint('course', __name__)
 #     else:
 #         return jsonify({'message': 'Unauthorized'}), 403
 
+@course_bp.route('/dashboard', methods=['GET'])
+@jwt_required()
+def get_statistics():
+    current_user = get_jwt_identity()
+
+    if current_user['role'] == 'admin':
+    # Lấy tổng số thiết bị
+        total_devices = Device.query.count()
+
+        # Lấy tổng số CVE
+        total_cves = CVE.query.count()
+
+        # Lấy tổng số exploit
+        total_exploits = Exploit.query.count()
+
+        return jsonify({
+            'total_devices': total_devices,
+            'total_cves': total_cves,
+            'total_exploits': total_exploits
+        })
 @course_bp.route('/courses', methods=['POST'])
 @jwt_required()
 def create_course():
@@ -114,7 +137,7 @@ def get_courses():
 
         for course in courses:
             # Lấy danh sách người tham gia khóa học
-            users_in_course = [{'id': user.id, 'username': user.username} for user in course.users]
+            users_in_course = [{'id': user.id, 'username': user.username, 'full_name':user.full_name} for user in course.users]
 
             # Lấy danh sách đề thi trong khóa học
             exams_in_course = [{'id': exam.id} for exam in course.exams]
@@ -190,15 +213,17 @@ def get_course_results(course_id):
     # Tạo danh sách kết quả
     results = []
     for exam in exams:
-        # Lấy thông tin người thi và điểm của họ
-        user_results = db.session.query(User.username, user_exam_association.c.score).\
+        # Lấy thông tin người thi, điểm và thông tin từ bảng Device
+        user_results = db.session.query(User.username, Device.name, Device.ip_address, user_exam_association.c.score).\
             join(user_exam_association, User.id == user_exam_association.c.user_id).\
+            join(Device, Device.id == exam.device_id).\
             filter(user_exam_association.c.exam_id == exam.id).all()
 
         # Thêm thông tin vào danh sách kết quả
         result_data = {
             'exam_id': exam.id,
-            'results': [{'username': username, 'score': score} for username, score in user_results]
+            'results': [{'username': username, 'device_name': device_name, 'score': score, 'ip_address':ip_address} 
+                        for username, device_name, ip_address, score in user_results]
         }
         results.append(result_data)
 

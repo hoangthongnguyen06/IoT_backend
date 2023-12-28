@@ -6,3 +6,4 @@ class Device(db.Model):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     ip_address = db.Column(db.String(15))
+    status = db.Column(db.String(10), default='active')

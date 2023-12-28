@@ -14,3 +14,4 @@ class Course(db.Model):
     # Quan hệ với Exam
     exams = db.relationship('Exam', secondary=course_exam_association, back_populates='courses')
     users = db.relationship('User', back_populates='course')
+    status = db.Column(db.String(20), default='Chưa thi', nullable=True)  # Thêm trường status

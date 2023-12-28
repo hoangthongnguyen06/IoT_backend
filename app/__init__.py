@@ -28,5 +28,4 @@ def create_app():
     app.register_blueprint(user_bp)
     app.register_blueprint(exploit_bp)
     
-    
     return app

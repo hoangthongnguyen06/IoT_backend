@@ -13,7 +13,7 @@ def get_users():
     current_user = get_jwt_identity()
     if current_user['role'] == 'admin':
         users = User.query.all()
-        users_data = [{'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role, 'course_id': user.course_id} for user in users]
+        users_data = [{'id': user.id, 'username': user.username, 'full_name': user.full_name, 'email': user.email, 'role': user.role, 'course_id': user.course_id, 'status':user.status} for user in users]
         return jsonify({'users': users_data})
     else:
         return jsonify({'message': 'Unauthorized'}), 403
@@ -24,7 +24,7 @@ def get_users_notadmin():
     current_user = get_jwt_identity()
     if current_user['role'] == 'admin':
         users = User.query.filter(User.role != 'admin').all()
-        users_data = [{'id': user.id, 'username': user.username, 'email': user.email, 'role': user.role, 'course_id': user.course_id} for user in users]
+        users_data = [{'id': user.id, 'username': user.username, 'email': user.email, 'full_name': user.full_name, 'role': user.role, 'course_id': user.course_id, 'status':user.status} for user in users]
         return jsonify({'users': users_data})
     else:
         return jsonify({'message': 'Unauthorized'}), 403
@@ -52,6 +52,7 @@ def update_user(user_id):
             data = request.get_json()
             user.username = data['username']
             user.email = data['email']
+            user.full_name = data['full_name']
             if 'password' in data:
                 user.password = generate_password_hash(data['password'], method='sha256')
             user.role = data['role']

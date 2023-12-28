@@ -19,6 +19,8 @@ def login_user():
     if user and user.password==password and user.role=="user":
         expires = timedelta(days=1)
         access_token = create_access_token(identity={'id': user.id, 'username': user.username, 'role': user.role}, expires_delta=expires)
+        user.status = 'active'
+        db.session.commit()
         return jsonify(access_token=access_token, user_id=user.id, username=user.username, role=user.role)
     else:
         return jsonify({'message': 'Invalid credentials'}), 401
@@ -35,6 +37,8 @@ def login_admin():
     if user and user.password==password and user.role=="admin":
         expires = timedelta(days=1)
         access_token = create_access_token(identity={'id': user.id, 'username': user.username, 'role': user.role}, expires_delta=expires)
+        user.status = 'active'
+        db.session.commit()
         return jsonify(access_token=access_token, user_id=user.id, username=user.username, role=user.role)
     else:
         return jsonify({'message': 'Invalid credentials'}), 40
@@ -42,6 +46,14 @@ def login_admin():
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
+    current_user = get_jwt_identity()
+
+    user = User.query.filter_by(id=current_user['id']).first()
+
+    if user:
+        user.status = 'inactive'
+        db.session.commit()
+
     return jsonify({'message': 'Logout successful'})
 
 @auth_bp.route('/current_user', methods=['GET'])
@@ -49,4 +61,4 @@ def logout():
 def get_current_user():
     current_user = get_jwt_identity()
     user = User.query.get(current_user['id'])
-    return jsonify({'user_id': user.id, 'username': user.username, 'role': user.role})
+    return jsonify({'user_id': user.id, 'username': user.username, 'fullname':user.full_name, 'role': user.role})

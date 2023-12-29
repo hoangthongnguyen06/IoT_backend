@@ -200,40 +200,43 @@ def get_course(course_id):
         return jsonify({'message': 'Course not found'}), 404
 
 @course_bp.route('/course_results/<int:course_id>', methods=['GET'])
+@jwt_required()
 def get_course_results(course_id):
-    # Lấy thông tin khóa thi
-    course = Course.query.get(course_id)
-    
-    if not course:
-        return jsonify({'message': 'Course not found'}), 404
+    current_user = get_jwt_identity()
+    if current_user['role'] == 'admin':
+        # Lấy thông tin khóa thi
+        course = Course.query.get(course_id)
+        
+        if not course:
+            return jsonify({'message': 'Course not found'}), 404
 
-    # Lấy danh sách các đề thi thuộc khóa thi
-    exams = db.session.query(Exam).join(course_exam_association).filter(course_exam_association.c.course_id == course_id).all()
+        # Lấy danh sách các đề thi thuộc khóa thi
+        exams = db.session.query(Exam).join(course_exam_association).filter(course_exam_association.c.course_id == course_id).all()
 
-    # Tạo danh sách kết quả
-    results = []
-    for exam in exams:
-        # Lấy thông tin người thi, điểm và thông tin từ bảng Device
-        user_results = db.session.query(User.username, Device.name, Device.ip_address, user_exam_association.c.score).\
-            join(user_exam_association, User.id == user_exam_association.c.user_id).\
-            join(Device, Device.id == exam.device_id).\
-            filter(user_exam_association.c.exam_id == exam.id).all()
+        # Tạo danh sách kết quả
+        results = []
+        for exam in exams:
+            # Lấy thông tin người thi, điểm và thông tin từ bảng Device
+            user_results = db.session.query(User.username, Device.name, Device.ip_address, user_exam_association.c.score).\
+                join(user_exam_association, User.id == user_exam_association.c.user_id).\
+                join(Device, Device.id == exam.device_id).\
+                filter(user_exam_association.c.exam_id == exam.id).all()
 
-        # Thêm thông tin vào danh sách kết quả
-        result_data = {
-            'exam_id': exam.id,
-            'results': [{'username': username, 'device_name': device_name, 'score': score, 'ip_address':ip_address} 
-                        for username, device_name, ip_address, score in user_results]
+            # Thêm thông tin vào danh sách kết quả
+            result_data = {
+                'exam_id': exam.id,
+                'results': [{'username': username, 'device_name': device_name, 'score': score, 'ip_address':ip_address} 
+                            for username, device_name, ip_address, score in user_results]
+            }
+            results.append(result_data)
+
+        # Tạo kết quả tổng hợp
+        course_result = {
+            'course_name': course.name,
+            'results': results
         }
-        results.append(result_data)
 
-    # Tạo kết quả tổng hợp
-    course_result = {
-        'course_name': course.name,
-        'results': results
-    }
-
-    return jsonify(course_result)
+        return jsonify(course_result)
 
 @course_bp.route('/courses/<int:course_id>', methods=['PUT'])
 @jwt_required()

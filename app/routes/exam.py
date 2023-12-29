@@ -77,6 +77,7 @@ def get_exams_by_user():
                         'created_at': exam.created_at.strftime("%Y-%m-%d %H:%M:%S"),  # Format ngày giờ
                         'duration': str(exam.exam_duration),  # Chuyển đối timedelta thành chuỗi
                         'score': score,
+                        'exam_id': exam.id,
                         'exam_answer_path':exam_answer_path
                     }
                     exams_data.append(exam_info)

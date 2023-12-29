@@ -35,7 +35,7 @@ def create_user():
     current_user = get_jwt_identity()
     if current_user['role'] == 'admin':
         data = request.get_json()
-        new_user = User(username=data['username'], email=data['email'], unit_id=data['unit'], password=data['password'], role=data['role'])
+        new_user = User(username=data['username'], email=data['email'], full_name=data['full_name'], unit_id=data['unit'], password=data['password'], role=data['role'])
         db.session.add(new_user)
         db.session.commit()
         return jsonify({'message': 'User created successfully'})

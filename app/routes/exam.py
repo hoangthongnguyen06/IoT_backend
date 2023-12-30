@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from app.models.exam import Exam, user_exam_association
 from app.models.device import Device
 from app.models.user import User
+from flask import send_from_directory
 from app.models import db
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
@@ -222,16 +223,16 @@ def upload_exam():
     if exam_answer_file and allowed_file(exam_answer_file.filename):
         # Tạo một tên an toàn cho file
         filename = secure_filename(exam_answer_file.filename)
-
+        user_course_id = db.session.query(User.course_id).filter_by(id=current_user['id']).scalar()
         # Thư mục lưu trữ file (tương đối)
-        upload_folder = os.path.join(current_app.root_path, 'exam_answers', str(datetime.now().date()))
+        upload_folder = os.path.join(current_app.root_path, 'exam_answers', str(user_course_id))
 
         # Tạo thư mục nếu nó không tồn tại
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
 
         # Lưu file vào thư mục được cấu hình
-        exam_path = os.path.join(str(datetime.now().date()), filename)
+        exam_path = os.path.join(str(user_course_id), filename)
         exam_answer_file.save(os.path.join(upload_folder, filename))
 
         # Lưu đường dẫn tương đối của file vào cơ sở dữ liệu
@@ -249,3 +250,29 @@ def upload_exam():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'doc', 'docx'}
+
+@exam_bp.route('/download-exam', methods=['POST'])
+@jwt_required()
+def download_exam():
+    current_user = get_jwt_identity()
+
+    # Kiểm tra xem người dùng có quyền admin hay không
+    if current_user['role'] != 'admin':
+        return jsonify({'message': 'Unauthorized'}), 403
+    data = request.get_json()
+    user_id = data.get('user_id')
+    exam_id = data.get('exam_id')
+    # Lấy đường dẫn tương đối của bài làm từ cơ sở dữ liệu
+    user_exam_path = db.session.query(user_exam_association.c.exam_answer_path).\
+        filter(user_exam_association.c.user_id == user_id, user_exam_association.c.exam_id == exam_id).scalar()
+
+    if user_exam_path is not None:
+        # Đường dẫn đầy đủ đến thư mục bài làm
+        course_id, filename = user_exam_path.split('\\')
+        print(filename)
+        directory = os.path.join(current_app.root_path, 'exam_answers', str(course_id))
+        print(directory)
+        # Trả về file cho admin tải xuống
+        return send_from_directory(directory, filename, as_attachment=True)
+    else:
+        return jsonify({'message': 'Exam not found'}), 404

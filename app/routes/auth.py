@@ -61,4 +61,4 @@ def logout():
 def get_current_user():
     current_user = get_jwt_identity()
     user = User.query.get(current_user['id'])
-    return jsonify({'user_id': user.id, 'username': user.username, 'fullname':user.full_name, 'role': user.role})
+    return jsonify({'user_id': user.id, 'username': user.username, 'fullname':user.full_name, 'role': user.role, 'status': user.status})

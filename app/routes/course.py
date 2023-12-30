@@ -217,7 +217,7 @@ def get_course_results(course_id):
         results = []
         for exam in exams:
             # Lấy thông tin người thi, điểm và thông tin từ bảng Device
-            user_results = db.session.query(User.username, Device.name, Device.ip_address, user_exam_association.c.score).\
+            user_results = db.session.query(User.username, User.id, Device.name, Device.ip_address, user_exam_association.c.score, user_exam_association.c.exam_answer_path).\
                 join(user_exam_association, User.id == user_exam_association.c.user_id).\
                 join(Device, Device.id == exam.device_id).\
                 filter(user_exam_association.c.exam_id == exam.id).all()
@@ -225,15 +225,15 @@ def get_course_results(course_id):
             # Thêm thông tin vào danh sách kết quả
             result_data = {
                 'exam_id': exam.id,
-                'results': [{'username': username, 'device_name': device_name, 'score': score, 'ip_address':ip_address} 
-                            for username, device_name, ip_address, score in user_results]
+                'results': [{'username': username, 'device_name': device_name, 'score': score, 'user_id': user_id, 'ip_address':ip_address, 'exam_answer_path':exam_answer_path} 
+                            for username, user_id, device_name, ip_address, score, exam_answer_path in user_results]
             }
             results.append(result_data)
 
         # Tạo kết quả tổng hợp
         course_result = {
             'course_name': course.name,
-            'results': results
+            'results': results  
         }
 
         return jsonify(course_result)

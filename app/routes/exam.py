@@ -67,8 +67,9 @@ def get_exams_by_user():
                     if not device:
                         return jsonify({'message': 'Device not found'}), 404
                     if exam_answer_path != "null":
-                        exam_answer_path = "Chưa nộp bài thi"
-                    else: exam_answer_path="Đã nộp bài thi"
+                        exam_answer_path = "Đã nộp bài thi"
+                    else: exam_answer_path="Chưa nộp bài thi"
+                    
                     # Tạo thông tin về exam với thông tin về tên device
                     exam_info = {
                         'id': exam.id,

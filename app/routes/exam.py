@@ -69,7 +69,7 @@ def get_exams_by_user():
                     if exam_answer_path != "null":
                         exam_answer_path = "Đã nộp bài thi"
                     else: exam_answer_path="Chưa nộp bài thi"
-                    
+
                     # Tạo thông tin về exam với thông tin về tên device
                     exam_info = {
                         'id': exam.id,
@@ -262,18 +262,22 @@ def download_exam():
         return jsonify({'message': 'Unauthorized'}), 403
     data = request.get_json()
     user_id = data.get('user_id')
-    exam_id = data.get('exam_id')
-    # Lấy đường dẫn tương đối của bài làm từ cơ sở dữ liệu
-    user_exam_path = db.session.query(user_exam_association.c.exam_answer_path).\
-        filter(user_exam_association.c.user_id == user_id, user_exam_association.c.exam_id == exam_id).scalar()
 
-    if user_exam_path is not None:
-        # Đường dẫn đầy đủ đến thư mục bài làm
+    # Lấy đường dẫn tương đối của bài làm từ cơ sở dữ liệu
+    user_exam_info = db.session.query(user_exam_association).\
+        filter(user_exam_association.c.user_id == user_id).first()
+
+    if user_exam_info:
+        exam_id = user_exam_info.exam_id
+        
+        # Lấy đường dẫn đầy đủ từ bảng user_exam_association
+        user_exam_path = user_exam_info.exam_answer_path
+
+        # Phần còn lại của mã không đổi
         course_id, filename = user_exam_path.split('\\')
-        print(filename)
         directory = os.path.join(current_app.root_path, 'exam_answers', str(course_id))
-        print(directory)
+        
         # Trả về file cho admin tải xuống
         return send_from_directory(directory, filename, as_attachment=True)
     else:
-        return jsonify({'message': 'Exam not found'}), 404
+        return jsonify({'message': 'User exam not found'}), 404

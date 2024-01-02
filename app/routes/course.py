@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.course import course_exam_association
 from app import db
 from random import shuffle
+from sqlalchemy import and_
 
 course_bp = Blueprint('course', __name__)
 
@@ -210,30 +211,30 @@ def get_course_results(course_id):
         if not course:
             return jsonify({'message': 'Course not found'}), 404
 
-        # Lấy danh sách các đề thi thuộc khóa thi
-        exams = db.session.query(Exam).join(course_exam_association).filter(course_exam_association.c.course_id == course_id).all()
+        # Lấy danh sách tất cả người dùng thuộc khóa học
+        users_in_course = db.session.query(User.id, User.username).join(User.course).filter(Course.id == course_id).all()
 
         # Tạo danh sách kết quả
         results = []
-        for exam in exams:
-            # Lấy thông tin người thi, điểm và thông tin từ bảng Device
-            user_results = db.session.query(User.username, User.id, Device.name, Device.ip_address, user_exam_association.c.score, user_exam_association.c.exam_answer_path).\
-                join(user_exam_association, User.id == user_exam_association.c.user_id).\
-                join(Device, Device.id == exam.device_id).\
-                filter(user_exam_association.c.exam_id == exam.id).all()
+        for user_id, username in users_in_course:
+            # Lấy thông tin kết quả của người dùng trong các đề thi thuộc khóa thi
+            user_results = db.session.query(Exam.id, Device.name, Device.ip_address, user_exam_association.c.score, user_exam_association.c.exam_answer_path).\
+                join(user_exam_association, and_(Exam.id == user_exam_association.c.exam_id, user_exam_association.c.user_id == user_id)).\
+                join(Device, Device.id == Exam.device_id).all()
 
             # Thêm thông tin vào danh sách kết quả
-            result_data = {
-                'exam_id': exam.id,
-                'results': [{'username': username, 'device_name': device_name, 'score': score, 'user_id': user_id, 'ip_address':ip_address, 'exam_answer_path':exam_answer_path} 
-                            for username, user_id, device_name, ip_address, score, exam_answer_path in user_results]
+            user_data = {
+                'user_id': user_id,
+                'username': username,
+                'results': [{'exam_id': exam_id, 'device_name': device_name, 'ip_address': ip_address, 'score': score, 'exam_answer_path': exam_answer_path} 
+                            for exam_id, device_name, ip_address, score, exam_answer_path in user_results]
             }
-            results.append(result_data)
+            results.append(user_data)
 
         # Tạo kết quả tổng hợp
         course_result = {
             'course_name': course.name,
-            'results': results  
+            'results_user': results  
         }
 
         return jsonify(course_result)

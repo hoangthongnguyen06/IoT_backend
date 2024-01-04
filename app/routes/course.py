@@ -183,7 +183,7 @@ def get_courses_by_user(user_id):
 def get_course(course_id):
     course = Course.query.get(course_id)
     if course:
-        users_in_course = [{'id': user.id, 'username': user.username} for user in course.users]
+        users_in_course = [{'id': user.id, 'username': user.username, 'full_name': user.full_name} for user in course.users]
 
         # Lấy danh sách đề thi trong khóa học
         exams_in_course = [{'id': exam.id} for exam in course.exams]

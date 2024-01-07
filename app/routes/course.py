@@ -4,7 +4,7 @@ from app.models.course import course_exam_association
 from app import db
 from random import shuffle
 from sqlalchemy import and_
-
+from sqlalchemy import func
 course_bp = Blueprint('course', __name__)
 
 from flask import Blueprint, jsonify, request
@@ -47,7 +47,16 @@ def get_statistics():
     current_user = get_jwt_identity()
 
     if current_user['role'] == 'admin':
-    # Lấy tổng số thiết bị
+        # Thống kê số lượng exploit theo topic, coi None là "Không xác định"
+        exploit_statistics = db.session.query(
+            func.coalesce(Exploit.topic, 'Không xác định').label('topic'),
+            func.count(Exploit.id)
+        ).group_by('topic').all()
+
+        # Tạo một dictionary để lưu kết quả
+        topic_statistics = {topic: count for topic, count in exploit_statistics}
+
+        # Lấy tổng số thiết bị
         total_devices = Device.query.count()
 
         # Lấy tổng số CVE
@@ -56,10 +65,20 @@ def get_statistics():
         # Lấy tổng số exploit
         total_exploits = Exploit.query.count()
 
+        if total_devices is None:
+            total_devices = 0
+
+        if total_cves is None:
+            total_cves = 0
+
+        if total_exploits is None:
+            total_exploits = 0
+
         return jsonify({
             'total_devices': total_devices,
             'total_cves': total_cves,
-            'total_exploits': total_exploits
+            'total_exploits': total_exploits,
+            'topic_statistics': topic_statistics
         })
 @course_bp.route('/courses', methods=['POST'])
 @jwt_required()

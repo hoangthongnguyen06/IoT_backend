@@ -12,7 +12,7 @@ cve_bp = Blueprint('cve', __name__)
 @jwt_required()
 def get_cves():
     cves = CVE.query.all()
-    cves_data = [{'id': cve.id, 'description': cve.description, 'name': cve.name, 'severity': cve.severity} for cve in cves]
+    cves_data = [{'id': cve.id, 'description': cve.description, 'name': cve.name, 'severity': cve.severity, "score":cve.score} for cve in cves]
     return jsonify({'cves': cves_data})
 
 @cve_bp.route('/cves', methods=['POST'])
@@ -57,4 +57,22 @@ def delete_cve(cve_id):
         else:
             return jsonify({'message': 'CVE not found'}), 404
 
+@cve_bp.route('/cve-info', methods=['POST'])
+@jwt_required()
+def get_cve_by_id():
+    data = request.get_json()
+    cve_id = data['cve_id']
+    cve = CVE.query.get(cve_id)
 
+    if cve:
+        cve_data = {
+            'id': cve.id,
+            'description': cve.description,
+            'name': cve.name,
+            'severity': cve.severity,
+            'score':cve.score
+            # Thêm các trường khác nếu cần
+        }
+        return jsonify({'cve': cve_data})
+    else:
+        return jsonify({'message': 'CVE not found'}), 404

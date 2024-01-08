@@ -33,6 +33,7 @@ def create_unit():
             return jsonify({'error': str(e)}), 500
     else:
         return jsonify({'message': 'Unauthorized'}), 403
+    
 @unit_bp.route('/units/<int:unit_id>', methods=['PUT'])
 @jwt_required()
 def update_unit(unit_id):
@@ -48,6 +49,7 @@ def update_unit(unit_id):
             return jsonify({'message': 'Unit not found'}), 404
     else:
         return jsonify({'message': 'Unauthorized'}), 403
+    
 @unit_bp.route('/units/<int:unit_id>', methods=['DELETE'])
 @jwt_required()
 def delete_unit(unit_id):
@@ -63,3 +65,15 @@ def delete_unit(unit_id):
     else:
         return jsonify({'message': 'Unauthorized'}), 403
 
+@unit_bp.route('/get-unit', methods=['POST'])
+@jwt_required()
+def get_unit_by_id():
+    current_user = get_jwt_identity()
+    data = request.get_json()
+    unit_id = data.get('unit_id')
+    unit = Unit.query.get(unit_id)
+    if unit:
+        unit_data = {'id': unit.id, 'name': unit.name} 
+        return jsonify({'units': unit_data})
+    else:
+        return jsonify({'message': 'Unit not found'}), 404

@@ -18,7 +18,7 @@ def create_app():
     login_manager.init_app(app)
     migrate = Migrate(app, db)
     from app.routes import auth_bp, course_bp, cve_bp, device_bp, exam_bp, unit_bp, user_bp, exploit_bp
-
+    # db.session.commit()
     app.register_blueprint(auth_bp)
     app.register_blueprint(course_bp)
     app.register_blueprint(cve_bp)
@@ -27,5 +27,4 @@ def create_app():
     app.register_blueprint(unit_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(exploit_bp)
-    
     return app

@@ -80,6 +80,7 @@ def get_statistics():
             'total_exploits': total_exploits,
             'topic_statistics': topic_statistics
         })
+    
 @course_bp.route('/courses', methods=['POST'])
 @jwt_required()
 def create_course():
@@ -103,6 +104,12 @@ def create_course():
 
         # Lấy danh sách người dùng từ request
         user_ids = data.get('user_ids', [])
+
+        # Kiểm tra xem có người dùng nào đã có khóa học chưa
+        users_with_course = User.query.filter(User.course_id.isnot(None), User.id.in_(user_ids)).all()
+
+        if users_with_course:
+            return jsonify({'message': 'Some users already have a course'}), 400
 
         # Lấy danh sách đề thi từ cơ sở dữ liệu
         all_exams = Exam.query.all()
@@ -156,6 +163,7 @@ def get_courses():
         courses_data = []
 
         for course in courses:
+            course.update_status()
             # Lấy danh sách người tham gia khóa học
             users_in_course = [{'id': user.id, 'username': user.username, 'full_name':user.full_name} for user in course.users]
 
@@ -169,7 +177,8 @@ def get_courses():
                 'start_time': course.start_time, 
                 'end_time': course.end_time,
                 'users': users_in_course,
-                'exams': exams_in_course
+                'exams': exams_in_course,
+                'status': course.status
             }
 
             courses_data.append(course_data)
@@ -187,8 +196,9 @@ def get_courses_by_user(user_id):
         user = User.query.get(user_id)
         if user:
             courses = Course.query.filter_by(id=user.course_id).all()
-
-            user_courses = [{'id': course.id, 'name': course.name, 'description': course.description, 'start_time': course.start_time, 'end_time': course.end_time } for course in courses]
+            for course in courses:
+                course.update_status()
+            user_courses = [{'id': course.id, 'name': course.name, 'description': course.description, 'start_time': course.start_time, 'end_time': course.end_time, 'course_status':course.status } for course in courses]
 
             return jsonify({'user_courses': user_courses})
         else:
@@ -202,10 +212,13 @@ def get_courses_by_user(user_id):
 def get_course(course_id):
     course = Course.query.get(course_id)
     if course:
+        course.update_status()
         users_in_course = [{'id': user.id, 'username': user.username, 'full_name': user.full_name} for user in course.users]
 
         # Lấy danh sách đề thi trong khóa học
         exams_in_course = [{'id': exam.id} for exam in course.exams]
+        
+        
         course_data = {
             'id': course.id,
             'name': course.name,
@@ -213,7 +226,8 @@ def get_course(course_id):
             'start_time': course.start_time, 
             'end_time': course.end_time,
             'users': users_in_course,
-            'exams': exams_in_course
+            'exams': exams_in_course,
+            'course_status':course.status
         }
         return jsonify({'course': course_data})
     else:
@@ -226,7 +240,7 @@ def get_course_results(course_id):
     if current_user['role'] == 'admin':
         # Lấy thông tin khóa thi
         course = Course.query.get(course_id)
-        
+        course.update_status()
         if not course:
             return jsonify({'message': 'Course not found'}), 404
 

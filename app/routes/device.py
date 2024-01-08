@@ -9,7 +9,7 @@ device_bp = Blueprint('device', __name__)
 @jwt_required()
 def get_devices():
     devices = Device.query.all()
-    devices_data = [{'id': device.id, 'name': device.name, 'description': device.description, "ip_address": device.ip_address} for device in devices]
+    devices_data = [{'id': device.id, 'name': device.name, 'description': device.description, "ip_address": device.ip_address, 'status':device.status} for device in devices]
     return jsonify({'devices': devices_data})
 
 @device_bp.route('/devices', methods=['POST'])
@@ -18,12 +18,13 @@ def create_device():
     current_user = get_jwt_identity()
     if current_user['role'] == 'admin':
         data = request.get_json()
-        new_device = Device(name=data['name'], description=data['description'], ip_address=data['ip_address'])
+        new_device = Device(name=data['name'], description=data['description'], ip_address=data['ip_address'], status=data['status'])
         db.session.add(new_device)
         db.session.commit()
         return jsonify({'message': 'Device created successfully'})
     else:
         return jsonify({'message': 'Unauthorized'}), 403
+    
 @device_bp.route('/devices/<int:device_id>', methods=['PUT'])
 @jwt_required()
 def update_device(device_id):
@@ -35,12 +36,14 @@ def update_device(device_id):
             device.name = data['name']
             device.description = data['description']
             device.ip_address=data['ip_address']
+            device.status=data['status']
             db.session.commit()
             return jsonify({'message': 'Device updated successfully'})
         else:
             return jsonify({'message': 'Device not found'}), 404
     else:
         return jsonify({'message': 'Unauthorized'}), 403
+    
 @device_bp.route('/devices/<int:device_id>', methods=['DELETE'])
 @jwt_required()
 def delete_device(device_id):
@@ -55,3 +58,26 @@ def delete_device(device_id):
             return jsonify({'message': 'Device not found'}), 404
     else:
             return jsonify({'message': 'Unauthorized'}), 403
+    
+@device_bp.route('/get-device', methods=['POST'])
+@jwt_required()
+def get_device_by_id():
+    data = request.get_json()
+
+    device_id = data.get('device_id')
+    if device_id is not None:
+        device = Device.query.get(device_id)
+
+        if device:
+            device_data = {
+                'id': device.id,
+                'name': device.name,
+                'description': device.description,
+                'ip_address': device.ip_address,
+                'status': device.status
+            }
+            return jsonify({'device': device_data})
+        else:
+            return jsonify({'message': 'Device not found'}), 404
+    else:
+        return jsonify({'message': 'Device ID is required in the request parameters'}), 400

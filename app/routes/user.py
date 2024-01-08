@@ -28,7 +28,37 @@ def get_users_notadmin():
         return jsonify({'users': users_data})
     else:
         return jsonify({'message': 'Unauthorized'}), 403
+    
+@user_bp.route('/get_user', methods=['POST'])
+@jwt_required()
+def get_user_by_id():
+    current_user = get_jwt_identity()
 
+    if current_user['role'] == 'admin':
+        data = request.get_json()
+        user_id = data.get('user_id')
+
+        if user_id is None:
+            return jsonify({'message': 'User ID is required'}), 400
+
+        user = User.query.get(user_id)
+
+        if user:
+            user_data = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'full_name': user.full_name,
+                'role': user.role,
+                'course_id': user.course_id,
+                'status': user.status
+            }
+            return jsonify({'user': user_data})
+        else:
+            return jsonify({'message': 'User not found'}), 404
+    else:
+        return jsonify({'message': 'Unauthorized'}), 403
+    
 @user_bp.route('/users', methods=['POST'])
 @jwt_required()
 def create_user():
@@ -77,3 +107,4 @@ def delete_user(user_id):
             return jsonify({'message': 'User not found'}), 404
     else:
         return jsonify({'message': 'Unauthorized'}), 403
+

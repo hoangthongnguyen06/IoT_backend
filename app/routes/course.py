@@ -218,7 +218,6 @@ def get_course(course_id):
         # Lấy danh sách đề thi trong khóa học
         exams_in_course = [{'id': exam.id} for exam in course.exams]
         
-        
         course_data = {
             'id': course.id,
             'name': course.name,

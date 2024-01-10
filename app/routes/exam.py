@@ -274,7 +274,10 @@ def download_exam():
         user_exam_path = user_exam_info.exam_answer_path
 
         # Phần còn lại của mã không đổi
-        course_id, filename = user_exam_path.split('\\')
+        try:
+            course_id, filename = user_exam_path.split('\\')
+        except:
+            course_id, filename = user_exam_path.split('/')
         directory = os.path.join(current_app.root_path, 'exam_answers', str(course_id))
         
         # Trả về file cho admin tải xuống

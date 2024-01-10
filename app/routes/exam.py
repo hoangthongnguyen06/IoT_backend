@@ -32,6 +32,7 @@ def get_exams():
                 'id': exam.id,
                 'device_id': exam.device_id,
                 'device_name': device.name,  # Thêm thông tin về tên device
+                'device_status': device.status,
                 'created_at': exam.created_at.strftime("%Y-%m-%d %H:%M:%S"),  # Format ngày giờ
                 'duration': str(exam.exam_duration)  # Chuyển đối timedelta thành chuỗi
             }

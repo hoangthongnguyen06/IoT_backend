@@ -153,7 +153,79 @@ def create_course():
         return jsonify({'message': 'Course created successfully with users and exams'})
     else:
         return jsonify({'message': 'Unauthorized'}), 403
-    
+
+@course_bp.route('/courses-specific-exam', methods=['POST'])
+@jwt_required()
+def create_course_specific_exam():
+    current_user = get_jwt_identity()
+
+    if current_user['role'] == 'admin':
+        data = request.get_json()
+
+        # Tạo khóa học mới
+        new_course = Course(
+            name=data['name'],
+            description=data['description'],
+            start_time=data['start_time'],
+            end_time=data['end_time']
+        )
+        db.session.add(new_course)
+        db.session.commit()
+
+        # Lấy id của khóa học mới tạo
+        course_id = new_course.id
+
+        # Lấy danh sách người dùng từ request
+        user_ids = data.get('user_ids', [])
+
+        # Kiểm tra xem có người dùng nào đã có khóa học chưa
+        users_with_course = User.query.filter(User.course_id.isnot(None), User.id.in_(user_ids)).all()
+
+        if users_with_course:
+            return jsonify({'message': 'Some users already have a course'}), 400
+
+        exam_ids = data.get('exam_ids', [])
+
+        # Kiểm tra xem có đề thi nào không
+        if not exam_ids:
+            return jsonify({'message': 'No exams specified for assignment'}), 400
+
+        # Lấy danh sách đề thi từ cơ sở dữ liệu dựa trên các ID truyền vào
+        selected_exams = Exam.query.filter(Exam.id.in_(exam_ids)).all()
+
+        # Kiểm tra xem số lượng đề thi được chọn có đủ để gán cho tất cả người dùng không
+        if len(selected_exams) < len(user_ids):
+            return jsonify({'message': 'Not enough selected exams available for assignment'}), 400
+
+        # Trộn ngẫu nhiên danh sách đề thi
+        shuffle(selected_exams)
+
+        # Gán đề thi cho từng người dùng
+        for user_id, assigned_exam in zip(user_ids, selected_exams):
+            # Thêm bản ghi mới vào bảng liên kết
+            course_exam_association_record = course_exam_association.insert().values(
+                course_id=course_id,
+                exam_id=assigned_exam.id
+            )
+            db.session.execute(course_exam_association_record)
+
+            # Thêm bản ghi mới vào bảng liên kết user_exam_association
+            user_exam_association_record = user_exam_association.insert().values(
+                user_id=user_id,
+                exam_id=assigned_exam.id,
+                score=None  # Đặt giá trị mặc định cho điểm số
+            )
+            db.session.execute(user_exam_association_record)
+
+            user = User.query.get(user_id)
+            user.course_id = course_id
+
+        db.session.commit()
+
+        return jsonify({'message': 'Course created successfully with users and exams'})
+    else:
+        return jsonify({'message': 'Unauthorized'}), 403
+
 @course_bp.route('/courses', methods=['GET'])
 @jwt_required()
 def get_courses():

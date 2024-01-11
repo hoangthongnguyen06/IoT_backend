@@ -202,18 +202,66 @@ def delete_exam(exam_id):
 
 
 
+# @exam_bp.route('/upload_exam_answer', methods=['POST'])
+# @jwt_required()
+# def upload_exam():
+#     current_user = get_jwt_identity()
+    
+#     # Kiểm tra xem người dùng có quyền upload bài thi hay không
+#     if current_user['role'] != 'user':
+#         return jsonify({'message': 'Unauthorized'}), 403
+
+#     exam_id = request.form['exam_id']
+#     exam = Exam.query.get(exam_id)
+    
+#     # Kiểm tra xem bài thi có tồn tại hay không
+#     if not exam:
+#         return jsonify({'message': 'Exam not found'}), 404
+
+#     # Lấy nội dung bài làm từ request
+#     exam_answer_file = request.files['exam_answer_file']
+
+#     # Kiểm tra định dạng file
+#     if exam_answer_file and allowed_file(exam_answer_file.filename):
+#         # Tạo một tên an toàn cho file
+#         filename = secure_filename(exam_answer_file.filename)
+#         user_course_id = db.session.query(User.course_id).filter_by(id=current_user['id']).scalar()
+#         # Thư mục lưu trữ file (tương đối)
+#         upload_folder = os.path.join(current_app.root_path, 'exam_answers', str(user_course_id))
+
+#         # Tạo thư mục nếu nó không tồn tại
+#         if not os.path.exists(upload_folder):
+#             os.makedirs(upload_folder)
+
+#         # Lưu file vào thư mục được cấu hình
+#         exam_path = os.path.join(str(user_course_id), filename)
+#         exam_answer_file.save(os.path.join(upload_folder, filename))
+
+#         # Lưu đường dẫn tương đối của file vào cơ sở dữ liệu
+#         current_user_exam_association = user_exam_association.insert().values(
+#             user_id=current_user['id'],
+#             exam_id=exam_id,
+#             exam_answer_path=exam_path
+#         )
+#         db.session.execute(current_user_exam_association)
+#         db.session.commit()
+
+#         return jsonify({'message': 'Exam uploaded successfully'})
+#     else:
+#         return jsonify({'message': 'Invalid file format'}), 400
+
 @exam_bp.route('/upload_exam_answer', methods=['POST'])
 @jwt_required()
 def upload_exam():
     current_user = get_jwt_identity()
-    
+
     # Kiểm tra xem người dùng có quyền upload bài thi hay không
     if current_user['role'] != 'user':
         return jsonify({'message': 'Unauthorized'}), 403
 
     exam_id = request.form['exam_id']
     exam = Exam.query.get(exam_id)
-    
+
     # Kiểm tra xem bài thi có tồn tại hay không
     if not exam:
         return jsonify({'message': 'Exam not found'}), 404
@@ -226,6 +274,7 @@ def upload_exam():
         # Tạo một tên an toàn cho file
         filename = secure_filename(exam_answer_file.filename)
         user_course_id = db.session.query(User.course_id).filter_by(id=current_user['id']).scalar()
+
         # Thư mục lưu trữ file (tương đối)
         upload_folder = os.path.join(current_app.root_path, 'exam_answers', str(user_course_id))
 
@@ -233,20 +282,39 @@ def upload_exam():
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
 
-        # Lưu file vào thư mục được cấu hình
-        exam_path = os.path.join(str(user_course_id), filename)
-        exam_answer_file.save(os.path.join(upload_folder, filename))
+        # Đường dẫn đầy đủ của file
+        full_path = os.path.join(upload_folder, filename)
 
-        # Lưu đường dẫn tương đối của file vào cơ sở dữ liệu
-        current_user_exam_association = user_exam_association.insert().values(
-            user_id=current_user['id'],
-            exam_id=exam_id,
-            exam_answer_path=exam_path
-        )
-        db.session.execute(current_user_exam_association)
-        db.session.commit()
+        # Kiểm tra xem file đã tồn tại chưa
+        if os.path.exists(full_path):
+            # Nếu tồn tại, bạn có thể xử lý logic replace file ở đây
+            os.remove(full_path)  # Xóa file cũ để thay thế bằng file mới
+            # Cập nhật đường dẫn trong cơ sở dữ liệu
+            exam_answer_file.save(full_path)
+            exam_path = os.path.join(str(user_course_id), filename)
+            current_user_exam_association = user_exam_association.update().values(
+                exam_answer_path=exam_path
+            ).where(
+                user_exam_association.c.user_id == current_user['id'] and user_exam_association.c.exam_id == exam_id
+            )
+            db.session.execute(current_user_exam_association)
+            db.session.commit()
+            return jsonify({'message': 'Exam replaced successfully'})
+        else:
+            # Nếu chưa tồn tại, lưu file như bình thường
+            exam_path = os.path.join(str(user_course_id), filename)
+            exam_answer_file.save(full_path)
 
-        return jsonify({'message': 'Exam uploaded successfully'})
+            # Lưu đường dẫn tương đối của file vào cơ sở dữ liệu
+            current_user_exam_association = user_exam_association.insert().values(
+                user_id=current_user['id'],
+                exam_id=exam_id,
+                exam_answer_path=exam_path
+            )
+            db.session.execute(current_user_exam_association)
+            db.session.commit()
+
+            return jsonify({'message': 'Exam uploaded successfully'})
     else:
         return jsonify({'message': 'Invalid file format'}), 400
 

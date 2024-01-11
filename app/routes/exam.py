@@ -290,7 +290,7 @@ def upload_exam():
             # Nếu tồn tại, bạn có thể xử lý logic replace file ở đây
             os.remove(full_path)  # Xóa file cũ để thay thế bằng file mới
             # Cập nhật đường dẫn trong cơ sở dữ liệu
-            exam_answer_file.save(full_path)
+            exam_answer_file.save(full_path)    
             exam_path = os.path.join(str(user_course_id), filename)
             current_user_exam_association = user_exam_association.update().values(
                 exam_answer_path=exam_path
@@ -306,11 +306,11 @@ def upload_exam():
             exam_answer_file.save(full_path)
 
             # Lưu đường dẫn tương đối của file vào cơ sở dữ liệu
-            current_user_exam_association = user_exam_association.insert().values(
-                user_id=current_user['id'],
-                exam_id=exam_id,
-                exam_answer_path=exam_path
-            )
+            current_user_exam_association = user_exam_association.update().values(
+        exam_answer_path=exam_path
+    ).where(
+        user_exam_association.c.user_id == current_user['id'] and user_exam_association.c.exam_id == exam_id
+    )
             db.session.execute(current_user_exam_association)
             db.session.commit()
 

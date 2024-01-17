@@ -2,6 +2,8 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.device import Device
 from app.models import db
+from werkzeug.utils import secure_filename
+import pandas as pd
 
 device_bp = Blueprint('device', __name__)
 
@@ -24,7 +26,41 @@ def create_device():
         return jsonify({'message': 'Device created successfully'})
     else:
         return jsonify({'message': 'Unauthorized'}), 403
-    
+
+@device_bp.route('/upload_devices', methods=['POST'])
+def upload_file():
+    if 'devices_file' not in request.files:
+        return jsonify({'message': 'No file part'}), 400
+
+    file = request.files['devices_file']
+
+    if file.filename == '':
+        return jsonify({'message': 'No selected file'}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(filename)
+
+        try:
+            df = pd.read_excel(filename)
+
+            for index, row in df.iterrows():
+                new_device = Device(
+                    name=row['name'],
+                    description=row['description'],
+                    ip_address=row['ip_address'],
+                    status=row['status']
+                )
+                db.session.add(new_device)
+
+            db.session.commit()
+
+            return jsonify({'message': 'File uploaded and data added to the database successfully'})
+        except Exception as e:
+            return jsonify({'message': f'Error processing file: {str(e)}'}), 500
+    else:
+        return jsonify({'message': 'Invalid file format'}), 400
+
 @device_bp.route('/devices/<int:device_id>', methods=['PUT'])
 @jwt_required()
 def update_device(device_id):
@@ -81,3 +117,6 @@ def get_device_by_id():
             return jsonify({'message': 'Device not found'}), 404
     else:
         return jsonify({'message': 'Device ID is required in the request parameters'}), 400
+    
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'xls', 'xlsx'}

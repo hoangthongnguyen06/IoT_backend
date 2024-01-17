@@ -55,7 +55,7 @@ def get_statistics():
 
         # Tạo một dictionary để lưu kết quả
         topic_statistics = {topic: count for topic, count in exploit_statistics}
-# Thống kê số lượng exploit theo CVE
+        # Thống kê số lượng exploit theo CVE
         exploit_cve_statistics = db.session.query(
             CVE.name,
             func.count(Exploit.id)
@@ -64,7 +64,8 @@ def get_statistics():
         # Tạo một dictionary để lưu kết quả
         cve_statistics = {cve_name: count for cve_name, count in exploit_cve_statistics}
 
-
+        # tong so luong khoa hoc
+        total_course = Course.query.count()
         # Lấy tổng số thiết bị
         total_devices = Device.query.count()
 
@@ -88,7 +89,8 @@ def get_statistics():
             'total_cves': total_cves,
             'total_exploits': total_exploits,
             'topic_statistics': topic_statistics,
-            'cve_statistics': cve_statistics
+            'cve_statistics': cve_statistics,
+            'total_course': total_course
         })
     
 @course_bp.route('/courses', methods=['POST'])
@@ -179,7 +181,7 @@ def create_course_specific_exam():
             start_time=data['start_time'],
             end_time=data['end_time']
         )
-        db.session.add(new_course)
+        db.session.add(new_course)  
         db.session.commit()
 
         # Lấy id của khóa học mới tạo

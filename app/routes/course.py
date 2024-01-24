@@ -63,7 +63,12 @@ def get_statistics():
 
         # Tạo một dictionary để lưu kết quả
         cve_statistics = {cve_name: count for cve_name, count in exploit_cve_statistics}
-
+        # Thống kê số lượng thiết bị theo chủng loại
+        device_by_names= db.session.query(
+            Device.name,
+            func.count(Device.id)
+        ).group_by(Device.name).all()
+        device_statistics= {name: count for name, count in device_by_names}
         # tong so luong khoa hoc
         total_course = Course.query.count()
         # Lấy tổng số thiết bị
@@ -90,6 +95,7 @@ def get_statistics():
             'total_exploits': total_exploits,
             'topic_statistics': topic_statistics,
             'cve_statistics': cve_statistics,
+            'device_statistics': device_statistics,
             'total_course': total_course
         })
     
